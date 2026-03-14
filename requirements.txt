@@ -1,0 +1,150 @@
+# requirements.txt
+## Student Name: Mihir Patel
+## Student ID: 219695808
+
+## 1. Problem Understanding - Describe the problem your system solves.
+
+System purpose:
+Manage event registration for a single event with a fixed capacity.
+The system handles user registrations, a FIFO waitlist, automatic
+promotions when a registered user cancels, and user status queries.
+The system is designed to support both a primary user (Jane) who
+values reliability and minimal interaction, and an edge user (Mo)
+who requires explicit explanations and deterministic behavior.
+
+Inputs to the system:
+- Event capacity (non-negative integer)
+- User registration requests (user ID strings)
+- User cancellation requests (user ID strings)
+- User status queries (user ID strings)
+
+Outputs produced by the system:
+- Registration result with status and explanation message
+- Cancellation result with explanation of what changed
+- User status (registered, waitlisted with position, or not found)
+- Ordered lists of registered and waitlisted users (snapshot)
+
+Primary goal of the system:
+Provide a reliable, predictable, and transparent event registration
+system that automatically resolves conflicts, preserves FIFO waitlist
+order, and gives clear feedback for every operation so that both
+primary and accessibility-focused users can trust the system.
+
+---
+
+## 2. Assumptions - List assumptions about the environment, users, or inputs.
+
+A1: Event capacity is a non-negative integer provided at initialization.
+A2: User IDs are non-empty strings that uniquely identify each user.
+A3: Only one event is managed per EventRegistration instance.
+A4: All operations (register, cancel, status, snapshot) are synchronous and atomic.
+A5: Waitlist promotions happen immediately and automatically when a registered user cancels.
+A6: The system must handle edge cases explicitly and never fail silently.
+A7: Users who cancel may re-register later as a new request.
+A8: The system does not persist state between sessions.
+
+---
+
+## 3. Functional Requirements - Describe the main behaviors the system must perform.
+
+FR1: The system shall register users until event capacity is reached and return a status with an explanation message.
+FR2: The system shall place users exceeding capacity into a FIFO waitlist and return their waitlist position.
+FR3: The system shall automatically promote the earliest waitlisted user when a registered user cancels, and return an explanation of the promotion.
+FR4: The system shall reject duplicate registration attempts by raising a DuplicateRequest exception with an explanatory message.
+FR5: The system shall allow users to query their current status (registered, waitlisted with 1-based position, or not found).
+FR6: The system shall return concise, human-readable explanation messages for every register and cancel operation to support accessibility needs.
+FR7: The system shall raise a NotFound exception with an explanatory message when cancellation is attempted for a user not in the system.
+
+---
+
+## 4. System Constraints - Constraints are conditions the system must always respect.
+
+C1: The number of registered users must never exceed event capacity.
+Derived from persona attribute: Jane – Need for predictable and reliable system behavior.
+
+C2: Waitlist ordering must always preserve FIFO (first-in, first-out) order.
+Derived from persona attribute: Jane – Need for predictable and stable ordering.
+
+C3: Waitlist promotions must be deterministic and occur immediately after a registered user cancels.
+Derived from persona attribute: Jane – Need for automatic handling of conflicts; Mo – Need for deterministic behavior under ties.
+
+C4: A user must not appear more than once in the system (no duplicates across registered and waitlisted).
+Derived from persona attribute: Jane – Pain point of inconsistent behavior; Mo – Pain point of silent failures.
+
+C5: Every register and cancel operation must return a concise, human-readable explanation message describing what happened.
+Derived from persona attribute: Jane – Preference for concise outputs; Mo – Need for clear explanations of system decisions.
+
+C6: Edge cases (zero capacity, cancellation of non-existent user, re-registration after cancel) must be handled explicitly with clear feedback.
+Derived from persona attribute: Mo – Need to explicitly handle edge cases instead of silent failure.
+
+C7: The system must not produce duplicate or redundant messages for a single operation.
+Derived from persona attribute: Jane – Pain point of too many notifications or duplicate messages.
+
+C8: The system must behave identically when the same sequence of operations is repeated.
+Derived from persona attribute: Mo – Pain point of inconsistent responses across repeated or boundary scenarios.
+
+---
+
+## 5. Acceptance Criteria - Acceptance criteria define how system behavior will be verified.
+
+AC1: After any operation, the count of registered users is less than or equal to capacity.
+AC2: After multiple registrations and cancellations, the waitlist order matches the original FIFO insertion order of remaining waitlisted users.
+AC3: When a registered user cancels and the waitlist is non-empty, the first waitlisted user is promoted to registered immediately.
+AC4: Attempting to register a user who is already registered or waitlisted raises DuplicateRequest.
+AC5: Every register() call returns a result containing a human-readable explanation string.
+AC6: Every cancel() call returns a result containing a human-readable explanation string describing what happened (including any promotion).
+AC7: When capacity is zero, all users are placed on the waitlist and no user is ever registered.
+AC8: A user who cancels and then re-registers is accepted without error.
+
+---
+
+## 6. Edge Cases - Describe unusual or boundary situations the system must handle.
+
+EC1: Event capacity is zero.
+Expected system behavior: All registration requests place users on the waitlist. No user is ever promoted to registered. Cancellation of a waitlisted user removes them cleanly.
+
+EC2: Multiple cancellations in sequence with waitlist promotions.
+Expected system behavior: Each cancellation of a registered user promotes the next waitlisted user in FIFO order. After all promotions, the registered and waitlist lists are consistent.
+
+EC3: A waitlisted user cancels before being promoted.
+Expected system behavior: The user is removed from the waitlist. Remaining waitlisted users shift up in position. Future promotions skip the cancelled user correctly.
+
+EC4: A user cancels and then re-registers.
+Expected system behavior: The system accepts the re-registration as a new request. The user is placed in registered (if space) or at the end of the waitlist.
+
+EC5: Cancellation of a user not in the system.
+Expected system behavior: The system raises NotFound with an explanatory message. No state changes occur.
+
+---
+
+## 7. Traceability - Link functional requirements to constraints and acceptance criteria.
+
+FR1 → C1 → AC1
+FR2 → C2 → AC2
+FR3 → C3 → AC3
+FR4 → C4 → AC4
+FR5 → C5, C7 → AC5, AC6
+FR6 → C5, C6 → AC5, AC6, AC8
+FR7 → C6 → AC5, AC6
+
+---
+
+## Revision Notes
+
+Revision Note 1
+Requirement updated: FR6 – Added explanation messages to register and cancel operations.
+Reason: During persona-aware requirement review, the LLM identified that Mo's need for clear explanations was not addressed by the Lab 8 implementation which returned only status objects without messages.
+Action: Added explanation field to registration and cancellation results. Updated FR6, C5, AC5, and AC6.
+Triggered by: LLM feedback during Task 6.
+
+Revision Note 2
+Requirement updated: EC4 – Re-registration after cancellation.
+Reason: Lab 8 implementation supported re-registration implicitly but it was not documented as an explicit requirement. Mo's need for deterministic edge case handling requires this to be explicit.
+Action: Added EC4 and AC8 to formally specify re-registration behavior.
+Triggered by: LLM feedback during Task 6.
+
+Revision Note 3
+Requirement updated: C8 – Deterministic repeated behavior.
+Reason: A test confirmed that the system behaves identically for repeated operation sequences, but this was not explicitly documented as a constraint. Mo's pain point about inconsistent repeated scenarios requires it.
+Action: Added C8 to require identical behavior for identical operation sequences.
+Triggered by: Testing during Task 8.

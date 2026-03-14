@@ -2,6 +2,10 @@
 ## Student ID: 219695808
 
 ================================================================================
+LAB 8 PROMPTS
+================================================================================
+
+================================================================================
 Prompt #1: Initial Problem Definition and Requirements Clarification
 ================================================================================
 Purpose: Establish a clear understanding of the Event Registration with Waitlist 
@@ -126,13 +130,6 @@ Full implementation provided with:
 - Dynamic position calculation for waitlist
 - Efficient state tracking via user_locations dict
 
-Code verified to pass all 5 test cases:
-✓ test_register_until_capacity_then_waitlist_fifo_positions
-✓ test_cancel_registered_promotes_earliest_waitlisted_fifo
-✓ test_duplicate_register_raises_for_registered_and_waitlisted
-✓ test_waitlisted_cancel_removes_and_updates_positions
-✓ test_capacity_zero_all_waitlisted_and_promotion_never_happens
-
 Decision: ACCEPTED - All tests pass. Implementation is complete and correct.
 
 ================================================================================
@@ -147,38 +144,153 @@ Prompt Text:
 - Reference all key features implemented"
 
 Response #4 Summary:
-Commit created successfully:
-- Commit hash: 779c454
-- Branch: main
-- Message includes all implemented features
-- File changes: 62 insertions, 18 deletions
+Commit created successfully with all key features documented.
 
 Decision: ACCEPTED - Code committed to repository.
 
 ================================================================================
-IMPLEMENTATION DISCOVERIES & CONSTRAINTS VERIFIED
+LAB 9 PROMPTS (Tasks 6–8)
 ================================================================================
 
-✓ Constraint C1 (Capacity Limit): Verified by capacity check in register()
-✓ Constraint C2 (FIFO Ordering): Verified by waitlist.pop(0) in cancel()
-✓ Constraint C3 (Single State): Verified by user_locations dict tracking
-✓ Constraint C4 (Uniqueness): Verified by duplicate check in register()
-✓ Constraint C5 (Deterministic): Verified by list-based ordering in all methods
-✓ Constraint C6 (Zero Capacity): Verified by test_capacity_zero test
-✓ Constraint C7 (Atomicity): Verified by atomic removal + promotion in cancel()
+================================================================================
+Prompt #5: Persona-Aware Requirement Review (Task 6)
+================================================================================
+Purpose: Review system requirements with persona constraints before implementation.
 
-EDGE CASES TESTED:
-✓ Basic registration and waitlist assignment
-✓ Automatic promotion on cancellation
-✓ Duplicate prevention (both registered and waitlisted)
-✓ Waitlist position updates after cancellation
-✓ Zero capacity handling
-✓ Status queries for registered, waitlisted, and non-existent users
+Prompt Text:
+"I am building an Event Registration with Waitlist system. Before generating code, I
+need you to review my specification for completeness. Here is the context:
 
-MISSING CLARIFICATIONS: None identified during implementation.
+SYSTEM DESCRIPTION:
+A Python module that manages event registration with fixed capacity, FIFO waitlist,
+automatic promotions on cancellation, duplicate prevention, and status queries.
+
+PERSONA 1 - Jane Adams (Primary User):
+- Busy professional who trusts automation and expects reliable, predictable behavior.
+- Acts quickly and rarely revisits suggestions.
+- Needs predictable ordering, automatic conflict handling, limited notification overload.
+- Pain points: too many notifications, inconsistent behavior, manual conflict resolution.
+
+PERSONA 2 - Mo Rodriguez (Edge User):
+- User with accessibility needs and heightened sensitivity to uncertainty.
+- Carefully reviews outputs and seeks explanations for system decisions.
+- Needs deterministic behavior, clear explanations, explicit edge case handling.
+- Pain points: unexplained changes, silent failures, inconsistent repeated behavior.
+
+CONSTRAINTS DERIVED FROM PERSONAS:
+C1: Registered count must never exceed capacity. (Jane – reliability)
+C2: Waitlist must preserve FIFO order. (Jane – predictable ordering)
+C3: Promotions must be deterministic and immediate. (Jane/Mo – automatic handling)
+C4: No duplicate users in the system. (Jane/Mo – consistency)
+C5: Every operation must return a concise explanation message. (Jane/Mo – accessibility)
+C6: Edge cases must be handled explicitly. (Mo – no silent failure)
+C7: No duplicate or redundant messages per operation. (Jane – notification limits)
+C8: Identical sequences must produce identical results. (Mo – deterministic behavior)
+
+ACCEPTANCE CRITERIA:
+AC1: Registered count <= capacity after any operation.
+AC2: Waitlist FIFO order preserved after operations.
+AC3: Promotion is immediate after registered cancellation.
+AC4: Duplicate registration raises DuplicateRequest.
+AC5: Register returns explanation message.
+AC6: Cancel returns explanation message.
+AC7: Zero capacity means all users are waitlisted.
+AC8: Re-registration after cancel is accepted.
+
+Please review this specification and identify:
+- Missing constraints
+- Ambiguous requirements
+- Unhandled edge cases"
+
+Response #5 Summary:
+The LLM identified two issues:
+1. The Lab 8 implementation returned only UserStatus without explanation messages,
+   which does not satisfy Mo's need for clear explanations (C5). Suggested adding an
+   explanation field to UserStatus and returning explanation strings from cancel().
+2. Re-registration after cancellation was handled implicitly but not documented as an
+   explicit requirement. Mo's need for explicit edge case handling (C6) requires it to
+   be formally specified.
+The LLM also confirmed that the remaining constraints and acceptance criteria were
+well-defined and testable.
+
+Decision: ACCEPTED - Updated FR6 to add explanation messages, added EC4 for
+re-registration, and added AC8. Documented as Revision Notes 1 and 2.
+
+================================================================================
+Prompt #6: Implementation Update (Task 7)
+================================================================================
+Purpose: Update solution.py to satisfy persona-derived constraints.
+
+Prompt Text:
+"Based on the revised requirements, update the EventRegistration class:
+1. Add an 'explanation' field to UserStatus (default None).
+2. register() should return UserStatus with a concise explanation message.
+3. cancel() should return a string explanation instead of None, describing
+   what happened including any promotion.
+4. All exception messages should include the user ID and describe the error.
+5. Maintain all existing behavior: FIFO waitlist, capacity enforcement,
+   duplicate prevention, deterministic promotion.
+Keep the code clean and well-commented with persona constraint references."
+
+Response #6 Summary:
+The LLM provided an updated implementation with:
+- UserStatus now has an optional 'explanation' field.
+- register() returns messages like "User 'alice' has been successfully registered."
+- cancel() returns a string explaining the cancellation and any promotion.
+- Exception messages include user IDs and are descriptive.
+- All existing constraints preserved.
+
+Decision: ACCEPTED - Implementation satisfies C5, C6, and C7.
+
+================================================================================
+Prompt #7: Test Design (Task 8)
+================================================================================
+Purpose: Create tests that verify persona-derived constraints and acceptance criteria.
+
+Prompt Text:
+"Write pytest tests for the updated EventRegistration system. Requirements:
+- At least 5 tests total, at least 2 edge case tests.
+- Each test must have a comment indicating which constraints and acceptance
+  criteria it covers (e.g., '# Covers C1, AC1').
+- Test that explanation messages are returned (C5, AC5, AC6).
+- Edge case tests for: zero capacity (EC1), re-registration after cancel (EC4),
+  multiple sequential cancellations (EC2).
+- Verify FIFO order, duplicate prevention, and promotion logic."
+
+Response #7 Summary:
+The LLM generated 9 tests covering all constraints:
+- test_register_until_capacity_then_waitlist (C1, C2, AC1, AC2)
+- test_cancel_promotes_earliest_waitlisted_user (C3, AC3)
+- test_duplicate_registration_raises_error (C4, AC4)
+- test_explanation_messages_are_returned (C5, AC5, AC6)
+- test_cancel_waitlisted_user_returns_explanation (C5, C7, AC6)
+- test_edge_case_zero_capacity (C6, AC7) — edge case
+- test_edge_case_reregister_after_cancel (C6, AC8) — edge case
+- test_edge_case_multiple_cancellations (C6, C8) — edge case
+- test_edge_case_cancel_nonexistent_user (C6) — edge case
+
+Decision: ACCEPTED - All constraints and acceptance criteria are covered with
+traceability comments.
+
+================================================================================
+Prompt #8: Test Debugging (Task 8)
+================================================================================
+Purpose: Run tests and verify all pass.
+
+Prompt Text:
+"Run the test suite and check if all tests pass. If any fail, identify
+whether the failure is due to an implementation issue or a missing requirement."
+
+Response #8 Summary:
+All 9 tests passed. The updated solution correctly handles explanation messages,
+edge cases, and persona constraints. No additional requirement revisions needed.
+
+Decision: ACCEPTED - All tests passing. Added Revision Note 3 documenting that
+C8 (deterministic repeated behavior) was confirmed by testing but was not
+previously an explicit constraint.
 
 ================================================================================
 FINAL STATUS: COMPLETE
 ================================================================================
-All requirements implemented. All tests passing. Code committed.
-Implementation ready for submission.
+All persona-derived constraints implemented and tested.
+Requirements, solution, and tests are aligned and traceable.
